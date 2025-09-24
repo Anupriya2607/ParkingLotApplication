@@ -13,7 +13,8 @@ This project provides the core logic to allocate, free, and manage parking spots
   - [Prerequisites](#prerequisites)  
   - [Installation](#installation)  
 - [Usage](#usage)  
-- [Project Structure](#project-structure)  
+- [Database Schema](#Database--Schema)
+- [Transaction Handling in Spring Boot](#Transaction--Handling)
 - [Contributing](#contributing)  
 - [Contact](#contact)  
 
@@ -64,27 +65,62 @@ Copy code
 mvn clean install
 (Optional) Run from IDE by running the main class (if present).
 
+### Database--Schema
+CREATE TABLE parking_lot (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    location VARCHAR(255) NOT NULL,
+    floors INT NOT NULL
+);
 
-Project Structure
-Here is a suggested project layout (adapt to your current code):
+CREATE TABLE parking_slot (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    type VARCHAR(20) NOT NULL,  -- ENUM: CAR, BIKE, TRUCK
+    floor INT NOT NULL,
+    status VARCHAR(20) DEFAULT 'AVAILABLE', -- ENUM: AVAILABLE, OCCUPIED
+    parking_lot_id BIGINT NOT NULL,
+    FOREIGN KEY (parking_lot_id) REFERENCES parking_lot(id)
+);
 
-swift
-Copy code
-ParkingLotApplication/
-├── .idea/
-├── src/
-│   ├── main/
-│   │   ├── java/com/yourorg/parkinglot/
-│   │   │   ├── model/
-│   │   │   ├── service/
-│   │   │   ├── controller/   (if applicable)
-│   │   │   └── App.java       (main entry)
-│   └── test/
-│       └── java/com/yourorg/parkinglot/
-│           ├── service/
-│           └── ...
-├── pom.xml
-└── README.md
+CREATE TABLE vehicle (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    plate_no VARCHAR(50) UNIQUE NOT NULL,
+    type VARCHAR(20) NOT NULL, -- ENUM: CAR, BIKE, TRUCK
+    owner_id BIGINT
+);
+
+CREATE TABLE ticket (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    vehicle_id BIGINT NOT NULL,
+    slot_id BIGINT NOT NULL,
+    entry_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    exit_time TIMESTAMP NULL,
+    status VARCHAR(20) DEFAULT 'ACTIVE', -- ENUM: ACTIVE, COMPLETED
+    FOREIGN KEY (vehicle_id) REFERENCES vehicle(id),
+    FOREIGN KEY (slot_id) REFERENCES parking_slot(id)
+);
+
+CREATE TABLE payment (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    ticket_id BIGINT NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    status VARCHAR(20) DEFAULT 'PENDING', -- ENUM: PENDING, SUCCESS, FAILED
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ticket_id) REFERENCES ticket(id)
+);
+
+
+
+
+ ### Transaction Handling in Spring Boot
+
+In a parking lot system, transactions are critical.
+For example: when a vehicle is parked, we must:
+Allocate a slot (status = OCCUPIED).
+Save vehicle details.
+Create a ticket.
+If any step fails, everything should roll back.
+
+
 model — domain classes
 
 service — core logic
@@ -94,7 +130,7 @@ controller or interface — interaction layer
 App.java or equivalent — main entry class
 
 
-Contributing
+### Contributing
 Contributions are welcome! Please follow these steps:
 
 Fork the repository
@@ -109,14 +145,8 @@ Push to your fork: git push origin feature/YourFeature
 
 Open a Pull Request
 
-Make sure your code adheres to style guidelines, and unit tests pass.
 
-License
-Specify your license here — for example:
-
-This project is licensed under the MIT License — see the LICENSE file for details.
-
-Contact
+### Contact
 Author: Anupriya Singh
 
 GitHub: https://github.com/Anupriya2607
